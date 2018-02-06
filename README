@@ -1,0 +1,115 @@
+ufscontrol
+
+A library to access and manage Kathrein UFS Satelite Receivers
+
+This library was developed for and tested with Kathrein UFS-923 Satellite Receiver with latest firmware 2.07.
+
+This is a web api I created for my personal use. I wanted to download the EPG from the receiver or download
+tv recordings to store them on my Server (further to compress them to H264 videos). Also this library can set or delete
+timers.
+
+In the end it is an implementation of the API doc (not 1:1, but >80%)
+https://www.kathrein.de/fileadmin/media/produkte/downloads/beta-software/KATHREIN-UFScontrol-API-German-V09.pdf
+
+The library expects a file called "config.json" in the same directory of the python files with the following content:
+    "receiver": {
+        "commands": {
+            "deleteTVRecording": "cmds/deleteRecording?recordkey-id={$1}&rootcontainer-id=0",
+            "setTimer": "cmds/setTimer?channel-no={$1}&start-time={$2}&tvtv-id={$3}",
+            "deleteTimer" : "cmds/deleteTimer?timer-no={$1}"
+        },
+        "downloadserver": "49152",
+        "host": "<IP Address of your receiver>",
+        "webserver": "9000",
+        "queries": {
+            "getEPGTable": "xmlfeeds/scheduleEpgTable?start-index={$1}&max-results=100",
+            "getTVRecordings": "xmlfeeds/archiveTable",
+            "getTvChannels": "xmlfeeds/channelTable?start-index=1&max-results=1000",
+            "getTvChannel": "xmlfeeds/channelTable?start-index={$1}&max-results=1",
+            "getEpgOfChannel": "xmlfeeds/scheduleEpgTable?start-index={$1}&max-results=100",
+            "getDetailedInfo": "xmlfeeds/detailedInfo?start-index={$1}&start-time={$2}",
+            "getTimerEvents" : "xmlfeeds/timerTable",
+            "getSeriesTimerEvents" : "xmlfeeds/seriesTimerTable",
+            "getDeviceInfo" : "xmlfeeds/deviceInfo"
+        },
+        "model": "Kathrain UFS-923",
+        "minInterfaceVersion" : 6
+    }
+    
+You can use it for other things, too.
+
+
+Example of usage:
+
+1) get the interface to the receiver:
+    receiver = ufscontrol.UFSControl()
+
+2) download list of available tv channels
+    channels = receiver.getTvChannels()
+
+    you will get a list of TVEvent objects containing:
+    channelNumber
+    channelName
+    eventName
+    startTime
+    duration
+    description
+    tvShowId
+    tvtvId
+    
+3) getTVRecordings()
+4) getTVRecordingDownloadPath(recordingEvent)
+  A list of recordings
+  for recordingEvent in receiver.getTVRecordings():
+        print("\tdownload url: " + receiver.getTVRecordingDownloadPath(recordingEvent))
+  Then its your work to use other libraries to download the file        
+
+5) deleteRecordingEvent(recordingEvent)
+    Deletes the file from the receiver
+
+6) getTvChannel(channelNumber)
+    Get TV Channel details, see Channel class
+
+7) getEpgOfChannel(channel)
+    Get EPG data for one channel, see tvevent class
+
+8) getTimerEvents()
+    get timers that are programmed and not yet recorded - see timerevent class
+
+9) getCurrentChannelNumber()
+    what is currently on tv
+
+10) getCurrentChannelName()
+    what is currently on tv
+
+11) isTvMode()
+    radio or tv mode of the receiver
+
+12) getProductType()
+
+13) isInStandby()
+    is it in virtual standby?
+
+14) getXmlInterfaceVersion()
+    API Version
+
+15) setTimer(channelnumber, starttime, tvtvid)
+    to set a timer, tvtvid and starttime must be 100% precise, with wrong values, the receiver also returns Ok
+    but does not list the new timer
+
+16) deleteTimer(channelName, starttime)
+    deletes a timer from the receiver
+
+To give you an idea where to use this for?
+I have setup a server two years ago which downloads all the EPG events per day. Then it tries to match it with third party data
+from the internet. All data is captured in a MySQL database.
+
+This is then used to display my own EPG on my personal webpage, and for further things:
+
+It downloads and archive my recordings to h264 files on my server using HandbrakeCLI.
+
+It detects which TV show episodes I am watching (and recording) and keeps track of my recording list not
+to miss any tv show episode.
+
+It also uses machine-learning now where it judges based on my recordings what I might want to see and what not. Then the system
+programs the timers accordingly.
